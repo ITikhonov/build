@@ -1,0 +1,96 @@
+import sys
+import os
+
+def normalized_path(dir,name):
+	return os.path.normpath(os.path.join(dir,name))
+
+class Source:
+	def __init__(_,dir,name,is_out=False):
+		_.dir=dir
+		_.name=name
+		_.path=normalized_path(dir,name)
+		_.deps=[]
+		_.changed=0
+		_.time=None
+		_.out=None
+		try:
+			_.time=os.stat(_.path).st_mtime
+		except OSError as e:
+			if (not is_out) or e.errno!=2: raise
+
+	def __repr__(_):
+		return 'S({},{},{},{})'.format(_.path,_.time,_.deps,_.out)
+
+def list_sources(dirs):
+	sources={}
+	build=[]
+	for dir in dirs:
+		for x in os.listdir(dir):
+			if x.endswith('.c'):
+				src=Source(dir,x)
+				src.out=Source(os.path.join('o',dir),x+'.o',is_out=True)
+				sources[src.path]=src
+				build.append(src)
+			elif x.endswith('.h'):
+				src=Source(dir,x)
+				sources[src.path]=src
+	return sources,build
+
+def compute_dependencies(s):
+	for x in s.values():
+		for l in open(x.path):
+			if l.startswith('#include'):
+				h=l.split()[1]
+				if h.startswith('"'):
+					h=h.split('"')[1]
+
+					dep=s[normalized_path(x.dir,h)]
+					x.deps.append(dep)
+
+def is_stale_src(s):
+	if s.out.time is None:
+		return True
+	if s.time > s.out.time:
+		return True
+	return False
+	
+
+def is_stale_dep(s,t):
+	for x in s.deps:
+		if x.time > t:
+			return True
+		if is_stale_dep(x,t): return True
+	return False
+
+def compile(s):
+	cmd='./c "{}" "{}"'.format(s.path,s.out.path)
+	print(cmd)
+	os.system(cmd)
+	
+
+def link(s):
+	cmd='./l'
+	print(cmd)
+	os.system(cmd)
+
+def main():
+	sources,build=list_sources(sys.argv[1:])
+	compute_dependencies(sources)
+	maylink=False
+	for x in build:
+		if is_stale_src(x):
+			compile(x)
+			maylink=True
+		elif is_stale_dep(x,x.out.time):
+			compile(x)
+			maylink=True
+
+	if maylink:
+		link()
+		
+
+
+if __name__=='__main__':
+	main()
+
+
