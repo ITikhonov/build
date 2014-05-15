@@ -2,6 +2,12 @@
 
 import sys
 import os
+import subprocess
+
+DEBUG='BUILD_DEBUG' in os.environ
+
+def debug(s):
+	if DEBUG: print(s)
 
 def normalized_path(dir,name):
 	return os.path.normpath(os.path.join(dir,name))
@@ -65,19 +71,29 @@ def is_stale_dep(s,t):
 	return False
 
 def compile(s):
-	cmd='./c "{}" "{}"'.format(s.path,s.out.path)
+	args=[s.path,s.out.path]
+	cmd='./c {}'.format(' '.join(args))
 	print(cmd)
-	os.system(cmd)
+	subprocess.call(['./c']+args)
 	
 
 def link(s):
-	cmd='./l'
+	args=[x.out.path for x in s]
+	cmd='./l {}'.format(' '.join(args))
 	print(cmd)
-	os.system(cmd)
+	subprocess.call(['./l']+args)
+
+def get_dirs():
+	return open('dirs').read().split()
 
 def main():
-	sources,build=list_sources(sys.argv[1:])
+	dirs=get_dirs()
+
+	sources,build=list_sources(dirs)
 	compute_dependencies(sources)
+
+	debug("SOURCES: {}".format(sources))
+
 	maylink=False
 	for x in build:
 		if is_stale_src(x):
@@ -88,7 +104,7 @@ def main():
 			maylink=True
 
 	if maylink:
-		link()
+		link(build)
 
 	print("done")
 		
