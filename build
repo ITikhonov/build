@@ -74,7 +74,7 @@ def compile(s):
 	args=[s.path,s.out.path]
 	cmd='./c {}'.format(' '.join(args))
 	print(cmd)
-	subprocess.call(['./c']+args)
+	return subprocess.call(['./c']+args)==0
 	
 
 def link(s):
@@ -95,17 +95,21 @@ def main():
 	debug("SOURCES: {}".format(sources))
 
 	maylink=False
+	errors=False
 	for x in build:
 		if is_stale_src(x):
-			compile(x)
+			if not compile(x): errors=True
 			maylink=True
 		elif is_stale_dep(x,x.out.time):
-			compile(x)
+			if not compile(x): errors=True
 			maylink=True
 
-	if maylink:
+	if maylink and not errors:
 		link(build)
 
+	if errors:
+		print("errors")
+		sys.exit(1)
 	print("done")
 		
 
