@@ -3,6 +3,20 @@
 import sys
 import os
 import subprocess
+import getopt
+
+class BuildOptions:
+	pass
+
+opts=BuildOptions()
+
+def parse_opts():
+	o,a=getopt.getopt(sys.argv[1:], "f")
+	opts.force=('-f','') in o
+
+	opts.flavors=['.'+x for x in a] if a else ['']
+	return opts
+
 
 DEBUG='BUILD_DEBUG' in os.environ
 
@@ -72,21 +86,27 @@ def is_stale_dep(s,t):
 
 def compile(s):
 	args=[s.path,s.out.path]
-	cmd='./c {}'.format(' '.join(args))
-	print(cmd)
-	return subprocess.call(['./c']+args)==0
+
+	errors=False
+
+	for x in opts.flavors:
+		errors=errors or (0==subprocess.call(['./c'+x]+args))
+
+	return errors
 	
 
 def link(s):
 	args=[x.out.path for x in s]
-	cmd='./l {}'.format(' '.join(args))
-	print(cmd)
-	subprocess.call(['./l']+args)
+	for x in opts.flavors:
+		subprocess.call(['./l'+x]+args)
 
 def get_dirs():
 	return open('dirs').read().split()
 
+
 def main():
+	opts=parse_opts()
+
 	dirs=get_dirs()
 
 	sources,build=list_sources(dirs)
@@ -97,7 +117,10 @@ def main():
 	maylink=False
 	errors=False
 	for x in build:
-		if is_stale_src(x):
+		if opts.force:
+			if not compile(x): errors=True
+			maylink=True
+		elif is_stale_src(x):
 			if not compile(x): errors=True
 			maylink=True
 		elif is_stale_dep(x,x.out.time):
