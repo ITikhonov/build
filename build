@@ -14,7 +14,7 @@ def parse_opts():
 	o,a=getopt.getopt(sys.argv[1:], "f")
 	opts.force=('-f','') in o
 
-	opts.flavors=['.'+x for x in a] if a else ['']
+	opts.flavor=('.'+a[0]) if a else ''
 	return opts
 
 
@@ -50,7 +50,7 @@ def list_sources(dirs):
 		for x in os.listdir(dir):
 			if x.endswith('.c'):
 				src=Source(dir,x)
-				src.out=Source(os.path.join('o',dir),x+'.o',is_out=True)
+				src.out=Source(os.path.join('o',dir),x+'.o'+opts.flavor,is_out=True)
 				sources[src.path]=src
 				build.append(src)
 			elif x.endswith('.h'):
@@ -86,19 +86,12 @@ def is_stale_dep(s,t):
 
 def compile(s):
 	args=[s.path,s.out.path]
-
-	errors=False
-
-	for x in opts.flavors:
-		errors=errors or (0==subprocess.call(['./c'+x]+args))
-
-	return errors
+	return 0==subprocess.call(['./c'+opts.flavor]+args)
 	
 
 def link(s):
 	args=[x.out.path for x in s]
-	for x in opts.flavors:
-		subprocess.call(['./l'+x]+args)
+	subprocess.call(['./l'+opts.flavor]+args)
 
 def get_dirs():
 	return open('dirs').read().split()
