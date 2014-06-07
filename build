@@ -66,8 +66,12 @@ def compute_dependencies(s):
 				if h.startswith('"'):
 					h=h.split('"')[1]
 
-					dep=s[normalized_path(x.dir,h)]
-					x.deps.append(dep)
+					try:
+						dep=s[normalized_path(x.dir,h)]
+						x.deps.append(dep)
+					except KeyError as e:
+						print('error in',x.path)
+						raise
 
 def is_stale_src(s):
 	if s.out.time is None:
