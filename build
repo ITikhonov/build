@@ -104,6 +104,9 @@ def get_dirs():
 def main():
 	opts=parse_opts()
 
+	if os.access('./b'+opts.flavor,os.X_OK):
+		assert 0==subprocess.call(['./b'+opts.flavor])
+
 	dirs=get_dirs()
 
 	sources,build=list_sources(dirs)
