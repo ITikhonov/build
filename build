@@ -11,8 +11,9 @@ class BuildOptions:
 opts=BuildOptions()
 
 def parse_opts():
-	o,a=getopt.getopt(sys.argv[1:], "f")
+	o,a=getopt.getopt(sys.argv[1:], "fi")
 	opts.force=('-f','') in o
+	opts.init=('-i','') in o
 
 	opts.flavor=('.'+a[0]) if a else ''
 	return opts
@@ -100,9 +101,37 @@ def link(s):
 def get_dirs():
 	return open('dirs').read().split()
 
+def init_file(name,content,exec=False):
+	if os.access(name,os.F_OK): return
+	f=open(name,"w")
+	f.write(content)
+	f.close()
+	if exec: os.chmod(name,0o775)
+	
+
+def init():
+	init_file('dirs','.\n')
+	init_file('c'+opts.flavor,"""#!/bin/sh
+set -xe
+exec gcc -std=c99 -Wall -Werror -g -c -o "$2" "$1"
+""",exec=True)
+
+	init_file('l'+opts.flavor,"""#!/bin/sh
+set -xe
+exec gcc -o fr "$@"
+""",exec=True)
+
+	init_file('b'+opts.flavor,"""#!/bin/sh
+set -xe
+""",exec=True)
+
 
 def main():
 	opts=parse_opts()
+
+	if opts.init:
+		init()
+		return
 
 	if os.access('./b'+opts.flavor,os.X_OK):
 		assert 0==subprocess.call(['./b'+opts.flavor])
