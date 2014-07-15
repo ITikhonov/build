@@ -11,8 +11,9 @@ class BuildOptions:
 opts=BuildOptions()
 
 def parse_opts():
-	o,a=getopt.getopt(sys.argv[1:], "fi")
+	o,a=getopt.getopt(sys.argv[1:], "fil")
 	opts.force=('-f','') in o
+	opts.link=('-l','') in o
 	opts.init=('-i','') in o
 
 	opts.flavor=('.'+a[0]) if a else ''
@@ -156,7 +157,7 @@ def main():
 			if not compile(x): errors=True
 			maylink=True
 
-	if maylink and not errors:
+	if opts.link or (maylink and not errors):
 		link(build)
 
 	if errors:
